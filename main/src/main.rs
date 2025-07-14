@@ -1,3 +1,3 @@
 fn main() {
-    println!("{:?}", glotus::add(1, 2));
+    println!("Hello, World");
 }

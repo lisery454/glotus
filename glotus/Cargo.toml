@@ -4,3 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cgmath = "0.18.0"
+chrono = "0.4.41"
+env_logger = "0.11.8"
+ffi = "0.1.1"
+gl = "0.14.0"
+glfw = "0.59.0"
+log = "0.4.27"
+thiserror = "2.0.12"
+uuid = { version = "1.7", features = ["v4", "serde"] }
+
+[build-dependencies]
+gl_generator = "0.14.0"
+
+[lints.rust]
+unused = "allow" # 禁用所有未使用警告
+# unused_variables = "allow"  # 仅禁用未使用变量
+# unused_functions = "allow"  # 仅禁用未使用函数
