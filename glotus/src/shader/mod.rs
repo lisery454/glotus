@@ -1,7 +1,7 @@
 use cgmath::Matrix;
 use gl::types::*;
 use log::{error, warn};
-use std::{fs, path::Path};
+use std::{ffi::CString, fs, path::Path, ptr};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -45,32 +45,32 @@ impl Shader {
     }
 
     fn compile_shader(source: &str, shader_type: GLenum) -> Result<GLuint, ShaderError> {
+        let shader = unsafe { gl::CreateShader(shader_type) };
+        let c_str = CString::new(source.as_bytes()).unwrap();
         unsafe {
-            let shader = gl::CreateShader(shader_type);
-            let c_str = std::ffi::CString::new(source.as_bytes()).unwrap();
-
-            gl::ShaderSource(shader, 1, &c_str.as_ptr(), std::ptr::null());
+            gl::ShaderSource(shader, 1, &c_str.as_ptr(), ptr::null());
             gl::CompileShader(shader);
 
             // 检查编译错误
             let mut success = 0;
             gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
-
             if success == 0 {
-                let mut log_len = 0;
-                gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut log_len);
-
-                let mut buffer = vec![0; log_len as usize];
-                gl::GetShaderInfoLog(shader, log_len, &mut log_len, buffer.as_mut_ptr() as *mut _);
+                let mut len = 0;
+                gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
+                let mut buffer = vec![0; len as usize];
+                gl::GetShaderInfoLog(
+                    shader,
+                    len,
+                    ptr::null_mut(),
+                    buffer.as_mut_ptr() as *mut GLchar,
+                );
 
                 let error_msg = String::from_utf8_lossy(&buffer).to_string();
-                gl::DeleteShader(shader);
-
                 return Err(ShaderError::CompileError(error_msg));
             }
-
-            Ok(shader)
         }
+
+        Ok(shader)
     }
 
     fn link_program(vertex_shader: GLuint, fragment_shader: GLuint) -> Result<GLuint, ShaderError> {

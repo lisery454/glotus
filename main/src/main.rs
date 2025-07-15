@@ -1,3 +1,21 @@
+use std::collections::HashMap;
+
+use glotus::mesh::vertex::Vertex;
+
 fn main() {
-    println!("Hello, World");
+    glotus::App::new()
+        .init_window(1440, 960)
+        .create_shader_from_file("shader_test", "shaders/vs_0.vs", "shaders/fs_0.fs")
+        .create_material("material_test", "shader_test", HashMap::new())
+        .create_mesh_from_data(
+            "mesh_test",
+            vec![
+                Vertex::from_position(1.0, 1.0, -5.0),
+                Vertex::from_position(1.0, -1.0, -5.0),
+                Vertex::from_position(-1.0, -1.0, -5.0),
+                Vertex::from_position(-1.0, 1.0, -5.0),
+            ],
+            vec![0, 1, 3, 1, 2, 3],
+        )
+        .run();
 }
