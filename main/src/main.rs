@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use glotus::mesh::vertex::Vertex;
+use glotus::{mesh::vertex::Vertex, transform::Transform};
 
 fn main() {
     glotus::App::new()
@@ -16,6 +16,12 @@ fn main() {
                 Vertex::from_position(-1.0, 1.0, -5.0),
             ],
             vec![0, 1, 3, 1, 2, 3],
+        )
+        .create_entity(
+            "entity_test",
+            Transform::new(),
+            "material_test",
+            "mesh_test",
         )
         .run();
 }

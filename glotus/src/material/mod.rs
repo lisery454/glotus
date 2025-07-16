@@ -32,17 +32,22 @@ impl Material {
         self.uniforms.insert(name.to_string(), value);
     }
 
-    // pub fn bind(&self) {
-    //     // 设置所有uniforms
-    //     for (name, value) in &self.uniforms {
-    //         match value {
-    //             UniformValue::Float(v) => self.shader.set_uniform_f32(name, *v),
-    //             UniformValue::Int(v) => self.shader.set_uniform_i32(name, *v),
-    //             UniformValue::Vector3(v) => self.shader.set_uniform_vec3(name, v),
-    //             UniformValue::Vector4(v) => self.shader.set_uniform_vec4(name, v),
-    //             UniformValue::Matrix4(m) => self.shader.set_uniform_mat4(name, m),
-    //             UniformValue::Texture(slot) => self.shader.set_uniform_i32(name, *slot as i32),
-    //         }
-    //     }
-    // }
+    pub fn bind(&self, shader: &mut Shader) {
+        shader.bind();
+        // 设置所有uniforms
+        for (name, value) in &self.uniforms {
+            match value {
+                UniformValue::Float(v) => shader.set_uniform_f32(name, *v),
+                UniformValue::Int(v) => shader.set_uniform_i32(name, *v),
+                UniformValue::Vector3(v) => shader.set_uniform_vec3(name, v),
+                UniformValue::Vector4(v) => shader.set_uniform_vec4(name, v),
+                UniformValue::Matrix4(m) => shader.set_uniform_mat4(name, m),
+                UniformValue::Texture(slot) => shader.set_uniform_i32(name, *slot as i32),
+            }
+        }
+    }
+
+    pub fn unbind(&self, shader: &mut Shader) {
+        shader.unbind();
+    }
 }
