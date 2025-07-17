@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use glotus::{mesh::vertex::Vertex, transform::Transform};
 
 fn main() {
-    glotus::App::new()
+    glotus::AppBuilder::new()
         .init_window(1440, 960)
         .create_shader_from_file("shader_test", "shaders/vs_0.vs", "shaders/fs_0.fs")
         .create_material("material_test", "shader_test", HashMap::new())

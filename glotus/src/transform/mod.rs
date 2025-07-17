@@ -29,4 +29,28 @@ impl Transform {
         // 4. 组合变换：T * R * S（注意顺序！）
         translation_matrix * rotation_matrix * scale_matrix
     }
+
+    pub fn get_position(&self) -> Point3<f32> {
+        self.position
+    }
+
+    pub fn set_position(&mut self, position: Point3<f32>) {
+        self.position = position;
+    }
+
+    pub fn get_scale(&self) -> Vector3<f32> {
+        self.scale
+    }
+
+    pub fn set_scale(&mut self, scale: Vector3<f32>) {
+        self.scale = scale;
+    }
+
+    pub fn get_rotation(&self) -> Quaternion<f32> {
+        self.rotation
+    }
+
+    pub fn set_rotation(&mut self, rotation: Quaternion<f32>) {
+        self.rotation = rotation;
+    }
 }
