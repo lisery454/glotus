@@ -1,4 +1,5 @@
 pub mod projection_type;
+pub mod camera_operation;
 
 use crate::transform::Transform;
 use cgmath::{Deg, Matrix4, Ortho, PerspectiveFov, Rad, Vector3};

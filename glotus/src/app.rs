@@ -1,5 +1,6 @@
 use crate::app;
 use crate::camera::Camera;
+use crate::camera::camera_operation::CameraMovement;
 use crate::entity::Entity;
 use crate::log_builder;
 use crate::material::Material;
@@ -9,6 +10,7 @@ use crate::mesh::vertex::Vertex;
 use crate::shader::Shader;
 use crate::transform::Transform;
 use cgmath::Matrix4;
+use cgmath::Vector2;
 use cgmath::Zero;
 use chrono::DateTime;
 use chrono::Local;
@@ -36,8 +38,8 @@ pub struct App {
     event_receiver: Option<Rc<RefCell<GlfwReceiver<(f64, WindowEvent)>>>>,
     delta_time: f32,
     last_time: DateTime<Local>,
-    window_width: u32,
-    window_height: u32,
+    last_cursor_pos: Vector2<f32>,
+    is_first_cursor_move: bool,
 
     shaders: HashMap<String, Shader>,
     meshes: HashMap<String, Mesh>,
@@ -56,8 +58,8 @@ impl App {
             event_receiver: None,
             delta_time: 0.0,
             last_time: Local::now(),
-            window_width: 0,
-            window_height: 0,
+            last_cursor_pos: Vector2 { x: 0.0, y: 0.0 },
+            is_first_cursor_move: true,
 
             shaders: HashMap::new(),
             meshes: HashMap::new(),
@@ -77,7 +79,7 @@ impl App {
         let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
         // 设置窗口提示
-        glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
+        glfw.window_hint(glfw::WindowHint::ContextVersion(4, 6));
         glfw.window_hint(glfw::WindowHint::OpenGlProfile(
             glfw::OpenGlProfileHint::Core,
         ));
@@ -99,6 +101,7 @@ impl App {
         window.set_cursor_pos_polling(true); // 监听鼠标移动事件
         window.set_framebuffer_size_polling(true); // 监听窗口大小变化
         window.set_close_polling(true);
+
         // 开启垂直同步
         glfw.set_swap_interval(SwapInterval::Sync(1));
         // 不限制帧率
@@ -106,15 +109,50 @@ impl App {
 
         // 加载 OpenGL 函数指针
         gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
+        // 显示版本
         unsafe {
-            info!("OpenGL version: {:?}", gl::GetString(gl::VERSION));
+            let version = gl::GetString(gl::VERSION);
+            let version_str = std::ffi::CStr::from_ptr(version as *const _)
+                .to_str()
+                .unwrap_or("无法获取 OpenGL 版本");
+
+            info!("OpenGL 版本: {}", version_str);
         }
+
+        // 启用原始鼠标输入（避免系统加速影响）
+        window.set_cursor_mode(glfw::CursorMode::Disabled);
+        window.set_cursor_pos(width as f64 / 2.0, height as f64 / 2.0); // 初始居中
 
         self.glfw = Some(Rc::new(RefCell::new(glfw)));
         self.window = Some(Rc::new(RefCell::new(window)));
         self.event_receiver = Some(Rc::new(RefCell::new(events)));
-        self.window_height = height;
-        self.window_width = width;
+
+        // 初始化视口
+        unsafe {
+            gl::Viewport(0, 0, width as i32, height as i32);
+        }
+        self.camera.borrow_mut().set_aspect_ratio(width, height);
+
+        // 窗口大小改变时，视口变化
+        let camera_weak = Rc::downgrade(&self.camera);
+        self.window
+            .as_ref()
+            .unwrap()
+            .borrow_mut()
+            .set_framebuffer_size_callback(move |window, width, height| {
+                debug!(
+                    "window size change: width {:?}, height: {:?}",
+                    width, height
+                );
+                unsafe {
+                    gl::Viewport(0, 0, width, height);
+                }
+                camera_weak
+                    .upgrade()
+                    .unwrap()
+                    .borrow_mut()
+                    .set_aspect_ratio(width as u32, height as u32);
+            });
     }
 
     pub fn create_shader_from_source(
@@ -231,37 +269,6 @@ impl App {
         debug!("fps: {:?}", 1.0 / self.delta_time);
     }
 
-    pub fn init(&mut self) {
-        unsafe {
-            gl::Viewport(0, 0, self.window_width as i32, self.window_height as i32);
-        }
-
-        self.camera
-            .borrow_mut()
-            .set_aspect_ratio(self.window_width, self.window_height);
-
-        let camera_weak = Rc::downgrade(&self.camera);
-
-        self.window
-            .as_ref()
-            .unwrap()
-            .borrow_mut()
-            .set_framebuffer_size_callback(move |window, width, height| {
-                debug!(
-                    "window size change: width {:?}, height: {:?}",
-                    width, height
-                );
-                unsafe {
-                    gl::Viewport(0, 0, width, height);
-                }
-                camera_weak
-                    .upgrade()
-                    .unwrap()
-                    .borrow_mut()
-                    .set_aspect_ratio(width as u32, height as u32);
-            });
-    }
-
     fn render(&mut self) {
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
@@ -304,6 +311,49 @@ impl App {
             match event {
                 WindowEvent::Key(key, _, action, _) => {
                     debug!("Trigger Key {:?} {:?}", key, action);
+                    let velocity = 16.0;
+                    match key {
+                        Key::W => self
+                            .camera
+                            .clone()
+                            .borrow_mut()
+                            .process_move(CameraMovement::Forward { velocity }, self.delta_time),
+                        Key::A => self
+                            .camera
+                            .clone()
+                            .borrow_mut()
+                            .process_move(CameraMovement::Left { velocity }, self.delta_time),
+                        Key::S => self
+                            .camera
+                            .clone()
+                            .borrow_mut()
+                            .process_move(CameraMovement::Backward { velocity }, self.delta_time),
+                        Key::D => self
+                            .camera
+                            .clone()
+                            .borrow_mut()
+                            .process_move(CameraMovement::Right { velocity }, self.delta_time),
+                        Key::LeftShift => self
+                            .camera
+                            .clone()
+                            .borrow_mut()
+                            .process_move(CameraMovement::Down { velocity }, self.delta_time),
+                        Key::Space => self
+                            .camera
+                            .clone()
+                            .borrow_mut()
+                            .process_move(CameraMovement::Up { velocity }, self.delta_time),
+                        Key::Escape => {
+                            debug!("Trigger WindowClose");
+                            self.window
+                                .as_ref()
+                                .unwrap()
+                                .borrow_mut()
+                                .set_should_close(true);
+                            self.is_running = false;
+                        }
+                        _ => {}
+                    }
                 }
                 WindowEvent::Close => {
                     debug!("Trigger WindowClose");
@@ -316,9 +366,25 @@ impl App {
                 }
                 WindowEvent::Scroll(xoffset, yoffset) => {
                     debug!("Trigger Mouse Scroll: X={}, Y={}", xoffset, yoffset);
+                    self.camera
+                        .clone()
+                        .borrow_mut()
+                        .process_zoom(yoffset as f32, 0.5);
                 }
                 WindowEvent::CursorPos(xpos, ypos) => {
                     debug!("Trigger Cursor Move: X={}, Y={}", xpos, ypos);
+                    if self.is_first_cursor_move {
+                        self.is_first_cursor_move = false;
+                        self.last_cursor_pos = Vector2::new(xpos as f32, ypos as f32);
+                    } else {
+                        let xoffset = xpos as f32 - self.last_cursor_pos.x;
+                        let yoffset = ypos as f32 - self.last_cursor_pos.y;
+                        self.camera
+                            .clone()
+                            .borrow_mut()
+                            .process_turn(xoffset, yoffset, 0.001, true);
+                        self.last_cursor_pos = Vector2::new(xpos as f32, ypos as f32);
+                    }
                 }
                 WindowEvent::MouseButton(button, action, _) => {
                     debug!("Trigger Mouse button: {:?}, Action: {:?}", button, action);

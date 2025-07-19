@@ -84,8 +84,6 @@ impl AppBuilder {
     }
 
     pub fn run(&mut self) {
-        self.app.borrow_mut().init();
-
         self.app.borrow_mut().run();
     }
 }
