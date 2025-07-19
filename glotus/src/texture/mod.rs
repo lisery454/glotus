@@ -84,6 +84,8 @@ impl Texture2D {
 
             // 生成 Mipmap（可选）
             gl::GenerateMipmap(gl::TEXTURE_2D);
+
+            gl::BindTexture(gl::TEXTURE_2D, 0);
         }
 
         Ok(Self { id: texture_id })

@@ -418,7 +418,7 @@ impl App {
         }
     }
 
-    pub fn unbind_material(&self, material: &RefMut<Material>) {
+    fn unbind_material(&self, material: &RefMut<Material>) {
         let shader = self.get_shader_by_name(&material.shader_name);
         shader.unbind();
     }
