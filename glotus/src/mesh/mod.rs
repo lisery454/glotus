@@ -2,9 +2,9 @@ pub mod vertex;
 
 use cgmath::{Vector2, Vector3};
 use gl::types::*;
-use vertex::Vertex;
 use std::mem;
 use std::ptr;
+use vertex::Vertex;
 
 #[derive(Debug, Clone)]
 pub struct Mesh {
@@ -31,8 +31,8 @@ impl Mesh {
                     v.normal.x,
                     v.normal.y,
                     v.normal.z,
-                    v.tex_coords.x,
-                    v.tex_coords.y,
+                    v.tex_coord.x,
+                    v.tex_coord.y,
                 ];
             })
             .collect::<Vec<f32>>();
@@ -87,15 +87,17 @@ impl Mesh {
                 (6 * mem::size_of::<f32>()) as *const GLvoid,
             );
 
-            // EBO
-            gl::GenBuffers(1, &mut ebo);
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (indices.len() * mem::size_of::<u32>()) as isize,
-                indices.as_ptr() as *const GLvoid,
-                gl::STATIC_DRAW,
-            );
+            if indices.len() > 0 {
+                // EBO
+                gl::GenBuffers(1, &mut ebo);
+                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+                gl::BufferData(
+                    gl::ELEMENT_ARRAY_BUFFER,
+                    (indices.len() * mem::size_of::<u32>()) as isize,
+                    indices.as_ptr() as *const GLvoid,
+                    gl::STATIC_DRAW,
+                );
+            }
 
             gl::BindVertexArray(0);
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -117,12 +119,16 @@ impl Mesh {
     pub fn draw(&self) {
         unsafe {
             gl::BindVertexArray(self.vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                self.indices.len() as i32,
-                gl::UNSIGNED_INT,
-                ptr::null(),
-            );
+            if self.indices.len() > 0 {
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    self.indices.len() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
+            } else {
+                gl::DrawArrays(gl::TRIANGLES, 0, self.vertices.len() as i32);
+            }
             gl::BindVertexArray(0);
         }
     }

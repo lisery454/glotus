@@ -2,7 +2,13 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use log::error;
 
-use crate::{app::App, material::UniformValue, mesh::vertex::Vertex, transform::Transform};
+use crate::{
+    app::App,
+    material::UniformValue,
+    mesh::vertex::Vertex,
+    texture::{FilteringMode, WrappingMode},
+    transform::Transform,
+};
 
 pub struct AppBuilder {
     app: Rc<RefCell<App>>,
@@ -51,10 +57,31 @@ impl AppBuilder {
         material_name: &str,
         shader_name: &str,
         uniforms: HashMap<String, UniformValue>,
+        textures: HashMap<String, u32>,
     ) -> &mut Self {
         self.app
             .borrow_mut()
-            .create_material(material_name, shader_name, uniforms);
+            .create_material(material_name, shader_name, uniforms, textures);
+        self
+    }
+
+    pub fn create_texture(
+        &mut self,
+        texture_name: &str,
+        path: &str,
+        wrapping_mode_s: WrappingMode,
+        wrapping_mode_t: WrappingMode,
+        filtering_mode_min: FilteringMode,
+        filtering_mode_mag: FilteringMode,
+    ) -> &mut Self {
+        self.app.borrow_mut().create_texture(
+            texture_name,
+            path,
+            wrapping_mode_s,
+            wrapping_mode_t,
+            filtering_mode_min,
+            filtering_mode_mag,
+        );
         self
     }
 
@@ -80,6 +107,11 @@ impl AppBuilder {
         self.app
             .borrow_mut()
             .create_entity(entity_name, transform, material_name, mesh_name);
+        self
+    }
+
+    pub fn set_camera_transform(&mut self, transform: Transform) -> &mut Self {
+        self.app.borrow_mut().set_camera_transform(transform);
         self
     }
 

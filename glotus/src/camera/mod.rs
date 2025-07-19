@@ -1,5 +1,5 @@
-pub mod projection_type;
 pub mod camera_operation;
+pub mod projection_type;
 
 use crate::transform::Transform;
 use cgmath::{Deg, Matrix4, Ortho, PerspectiveFov, Rad, Vector3};
@@ -28,6 +28,10 @@ impl Camera {
 
     pub fn get_transform(&self) -> &Transform {
         &self.transform
+    }
+
+    pub fn set_transform(&mut self, transform: Transform) {
+        self.transform = transform
     }
 
     pub fn set_aspect_ratio(&mut self, width: u32, height: u32) {

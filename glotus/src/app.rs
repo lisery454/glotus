@@ -5,9 +5,15 @@ use crate::entity::Entity;
 use crate::log_builder;
 use crate::material::Material;
 use crate::material::UniformValue;
+use crate::mesh;
 use crate::mesh::Mesh;
 use crate::mesh::vertex::Vertex;
+use crate::shader;
 use crate::shader::Shader;
+use crate::texture;
+use crate::texture::FilteringMode;
+use crate::texture::Texture2D;
+use crate::texture::WrappingMode;
 use crate::transform::Transform;
 use cgmath::Matrix4;
 use cgmath::Vector2;
@@ -22,6 +28,7 @@ use log::error;
 use log::info;
 use log::trace;
 use std::cell::RefCell;
+use std::cell::RefMut;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::iter::Map;
@@ -41,10 +48,11 @@ pub struct App {
     last_cursor_pos: Vector2<f32>,
     is_first_cursor_move: bool,
 
-    shaders: HashMap<String, Shader>,
-    meshes: HashMap<String, Mesh>,
-    materials: HashMap<String, Material>,
-    entities: HashMap<String, Entity>,
+    shaders: Rc<RefCell<HashMap<String, Shader>>>,
+    meshes: Rc<RefCell<HashMap<String, Mesh>>>,
+    materials: Rc<RefCell<HashMap<String, Material>>>,
+    textures: Rc<RefCell<HashMap<String, Texture2D>>>,
+    entities: Rc<RefCell<HashMap<String, Entity>>>,
 
     camera: Rc<RefCell<Camera>>,
 }
@@ -61,10 +69,11 @@ impl App {
             last_cursor_pos: Vector2 { x: 0.0, y: 0.0 },
             is_first_cursor_move: true,
 
-            shaders: HashMap::new(),
-            meshes: HashMap::new(),
-            materials: HashMap::new(),
-            entities: HashMap::new(),
+            shaders: Rc::new(RefCell::new(HashMap::new())),
+            meshes: Rc::new(RefCell::new(HashMap::new())),
+            materials: Rc::new(RefCell::new(HashMap::new())),
+            textures: Rc::new(RefCell::new(HashMap::new())),
+            entities: Rc::new(RefCell::new(HashMap::new())),
 
             camera: Rc::new(RefCell::new(Camera::new(Transform::new()))),
         };
@@ -83,6 +92,7 @@ impl App {
         glfw.window_hint(glfw::WindowHint::OpenGlProfile(
             glfw::OpenGlProfileHint::Core,
         ));
+        glfw.window_hint(glfw::WindowHint::Samples(Some(4)));
 
         // 创建窗口
         let (mut window, events) = glfw
@@ -96,6 +106,7 @@ impl App {
 
         // 设置窗口为当前上下文
         window.make_current();
+        // window.set_all_polling(true);
         window.set_key_polling(true); // 监听键盘输入
         window.set_scroll_polling(true); // 监听滚轮事件
         window.set_cursor_pos_polling(true); // 监听鼠标移动事件
@@ -117,15 +128,26 @@ impl App {
                 .unwrap_or("无法获取 OpenGL 版本");
 
             info!("OpenGL 版本: {}", version_str);
+            let version = gl::GetString(gl::SHADING_LANGUAGE_VERSION);
+            let version_str = std::ffi::CStr::from_ptr(version as *const _)
+                .to_str()
+                .unwrap_or("无法获取可支持的glsl 版本");
+            info!("支持的 GLSL 版本: {:?}", version_str);
         }
 
         // 启用原始鼠标输入（避免系统加速影响）
         window.set_cursor_mode(glfw::CursorMode::Disabled);
         window.set_cursor_pos(width as f64 / 2.0, height as f64 / 2.0); // 初始居中
 
+        // 初始化成员
         self.glfw = Some(Rc::new(RefCell::new(glfw)));
         self.window = Some(Rc::new(RefCell::new(window)));
         self.event_receiver = Some(Rc::new(RefCell::new(events)));
+
+        // 抗锯齿
+        unsafe {
+            gl::Enable(gl::MULTISAMPLE);
+        }
 
         // 初始化视口
         unsafe {
@@ -164,7 +186,7 @@ impl App {
         match Shader::from_sources(vertex_source, fragment_source) {
             Ok(s) => {
                 info!("success add shader <{:?}>", shader_name);
-                self.shaders.insert(shader_name.to_string(), s);
+                self.shaders.borrow_mut().insert(shader_name.to_string(), s);
             }
             Err(e) => {
                 error!("{:}", e);
@@ -181,7 +203,7 @@ impl App {
         match Shader::from_files(Path::new(vertex_path), Path::new(fragment_path)) {
             Ok(s) => {
                 info!("success add shader <{:?}>", shader_name);
-                self.shaders.insert(shader_name.to_string(), s);
+                self.shaders.borrow_mut().insert(shader_name.to_string(), s);
             }
             Err(e) => {
                 error!("{:}", e);
@@ -194,16 +216,19 @@ impl App {
         material_name: &str,
         shader_name: &str,
         uniforms: HashMap<String, UniformValue>,
+        textures: HashMap<String, u32>,
     ) {
-        if !self.shaders.contains_key(shader_name) {
+        if !self.shaders.borrow().contains_key(shader_name) {
             error!(
                 "fail add material <{:?}>, because shader <{:?}> not exists",
                 material_name, shader_name
             );
         } else {
-            let material = Material::new(shader_name, uniforms);
+            let material = Material::new(shader_name, uniforms, textures);
             info!("success add shader <{:?}>", material_name);
-            self.materials.insert(material_name.to_string(), material);
+            self.materials
+                .borrow_mut()
+                .insert(material_name.to_string(), material);
         }
     }
 
@@ -216,7 +241,35 @@ impl App {
         let mesh = Mesh::new(vertices, indices);
 
         info!("success add mesh <{:?}>", mesh_name);
-        self.meshes.insert(mesh_name.to_string(), mesh);
+        self.meshes.borrow_mut().insert(mesh_name.to_string(), mesh);
+    }
+
+    pub fn create_texture(
+        &mut self,
+        texture_name: &str,
+        path: &str,
+        wrapping_mode_s: WrappingMode,
+        wrapping_mode_t: WrappingMode,
+        filtering_mode_min: FilteringMode,
+        filtering_mode_mag: FilteringMode,
+    ) {
+        match Texture2D::from_file(
+            path,
+            wrapping_mode_s,
+            wrapping_mode_t,
+            filtering_mode_min,
+            filtering_mode_mag,
+        ) {
+            Ok(t) => {
+                info!("success add texture <{:?}>", texture_name);
+                self.textures
+                    .borrow_mut()
+                    .insert(texture_name.to_string(), t);
+            }
+            Err(e) => {
+                error!("{:}", e);
+            }
+        }
     }
 
     pub fn create_entity(
@@ -226,12 +279,12 @@ impl App {
         material_name: &str,
         mesh_name: &str,
     ) {
-        if !self.materials.contains_key(material_name) {
+        if !self.materials.borrow().contains_key(material_name) {
             error!(
                 "fail add entity <{:?}>, because material <{:?}> not exists",
                 entity_name, material_name
             );
-        } else if !self.meshes.contains_key(mesh_name) {
+        } else if !self.meshes.borrow().contains_key(mesh_name) {
             error!(
                 "fail add entity <{:?}>, because mesh <{:?}> not exists",
                 entity_name, mesh_name
@@ -239,8 +292,14 @@ impl App {
         } else {
             let entity = Entity::new(transform, material_name, mesh_name);
             info!("success add entity <{:?}>", entity_name);
-            self.entities.insert(entity_name.to_string(), entity);
+            self.entities
+                .borrow_mut()
+                .insert(entity_name.to_string(), entity);
         }
+    }
+
+    pub fn set_camera_transform(&mut self, transform: Transform) {
+        self.camera.borrow_mut().set_transform(transform);
     }
 
     pub fn run(&mut self) {
@@ -269,6 +328,30 @@ impl App {
         debug!("fps: {:?}", 1.0 / self.delta_time);
     }
 
+    fn get_material_by_name(&self, name: &String) -> RefMut<Material> {
+        let materials = self.materials.borrow_mut();
+        let material = RefMut::map(materials, |m| m.get_mut(name).unwrap());
+        material
+    }
+
+    fn get_mesh_by_name(&self, name: &String) -> RefMut<Mesh> {
+        let meshes = self.meshes.borrow_mut();
+        let mesh = RefMut::map(meshes, |m| m.get_mut(name).unwrap());
+        mesh
+    }
+
+    fn get_shader_by_name(&self, name: &String) -> RefMut<Shader> {
+        let shaders = self.shaders.borrow_mut();
+        let shader = RefMut::map(shaders, |m| m.get_mut(name).unwrap());
+        shader
+    }
+
+    fn get_texture_by_name(&self, name: &String) -> RefMut<Texture2D> {
+        let textures = self.textures.borrow_mut();
+        let texture = RefMut::map(textures, |m| m.get_mut(name).unwrap());
+        texture
+    }
+
     fn render(&mut self) {
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
@@ -278,30 +361,66 @@ impl App {
             let view_matrix = self.camera.borrow().get_view_matrix();
             let projection_matrix = self.camera.borrow().get_projection_matrix();
 
-            for (entity_name, entity) in &mut self.entities {
+            for (entity_name, entity) in self.entities.borrow().iter() {
                 let model_matrix = entity.transform.to_matrix();
 
-                let material_name = &entity.material_name;
-                let material = self.materials.get_mut(material_name).unwrap();
-                material.set_uniform("model_matrix", UniformValue::Matrix4(model_matrix));
-                material.set_uniform("view_matrix", UniformValue::Matrix4(view_matrix));
-                material.set_uniform(
+                // 给材质注入全局变量，比如mvp
+                let mut material = self.get_material_by_name(&entity.material_name);
+                material.insert_uniform("model_matrix", UniformValue::Matrix4(model_matrix));
+                material.insert_uniform("view_matrix", UniformValue::Matrix4(view_matrix));
+                material.insert_uniform(
                     "projection_matrix",
                     UniformValue::Matrix4(projection_matrix),
                 );
 
-                let shader_name = &material.shader_name;
-                let shader = self.shaders.get_mut(shader_name).unwrap();
+                // 通知opengl用这个材质，初始化
+                self.bind_material(&entity.material_name, &material);
 
-                material.bind(shader);
+                // 通知opengl进行绘制
+                self.get_mesh_by_name(&entity.mesh_name).draw();
 
-                let mesh_name = &entity.mesh_name;
-                let mesh = self.meshes.get_mut(mesh_name).unwrap();
-                mesh.draw();
-
-                material.unbind(shader);
+                // 通知opengl卸载这个材质
+                self.unbind_material(&material);
             }
         }
+    }
+
+    fn bind_material(&self, material_name: &String, material: &RefMut<Material>) {
+        // 使用这个材质对应的shader
+        let shader = self.get_shader_by_name(&material.shader_name);
+        shader.bind();
+
+        // 给shader设置所有这个材质对应的uniforms
+        for (name, value) in &material.uniforms {
+            match value {
+                UniformValue::Float(v) => shader.set_uniform_f32(name, *v),
+                UniformValue::Int(v) => shader.set_uniform_i32(name, *v),
+                UniformValue::Vector3(v) => shader.set_uniform_vec3(name, v),
+                UniformValue::Vector4(v) => shader.set_uniform_vec4(name, v),
+                UniformValue::Matrix4(m) => shader.set_uniform_mat4(name, m),
+                UniformValue::Texture(slot) => shader.set_uniform_i32(name, *slot as i32),
+            }
+        }
+
+        for (texture_name, texture_slot_id) in &material.textures {
+            if !self.textures.borrow().contains_key(texture_name) {
+                error!(
+                    "fail use material <{:?}>, because texture <{:?}> not exists",
+                    material_name, texture_name
+                );
+            } else {
+                unsafe {
+                    let texture = self.get_texture_by_name(texture_name);
+                    gl::ActiveTexture(gl::TEXTURE0 + texture_slot_id);
+                    gl::BindTexture(gl::TEXTURE_2D, texture.get_id());
+                }
+            }
+        }
+    }
+
+    pub fn unbind_material(&self, material: &RefMut<Material>) {
+        let shader = self.get_shader_by_name(&material.shader_name);
+        shader.unbind();
     }
 
     fn handle_window_event(&mut self) {
@@ -311,7 +430,7 @@ impl App {
             match event {
                 WindowEvent::Key(key, _, action, _) => {
                     debug!("Trigger Key {:?} {:?}", key, action);
-                    let velocity = 16.0;
+                    let velocity = 40.0;
                     match key {
                         Key::W => self
                             .camera

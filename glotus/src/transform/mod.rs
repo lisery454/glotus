@@ -16,6 +16,14 @@ impl Transform {
         }
     }
 
+    pub fn from_position(x: f32, y: f32, z: f32) -> Self {
+        Self {
+            position: Point3::new(x, y, z),
+            rotation: Quaternion::new(1.0, 0.0, 0.0, 0.0),
+            scale: Vector3::new(1.0, 1.0, 1.0),
+        }
+    }
+
     pub fn to_matrix(&self) -> Matrix4<f32> {
         // 1. 生成缩放矩阵
         let scale_matrix = Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, self.scale.z);
@@ -38,6 +46,10 @@ impl Transform {
         self.position = position;
     }
 
+    pub fn translate(&mut self, delta: Vector3<f32>) {
+        self.position = self.position + delta;
+    }
+
     pub fn get_scale(&self) -> Vector3<f32> {
         self.scale
     }
@@ -46,11 +58,19 @@ impl Transform {
         self.scale = scale;
     }
 
+    pub fn scale(&mut self, scale: Vector3<f32>) {
+        self.scale = self.scale.cross(scale);
+    }
+
     pub fn get_rotation(&self) -> Quaternion<f32> {
         self.rotation
     }
 
     pub fn set_rotation(&mut self, rotation: Quaternion<f32>) {
         self.rotation = rotation;
+    }
+
+    pub fn rotate(&mut self, rotation: Quaternion<f32>) {
+        self.rotation = self.rotation * rotation;
     }
 }

@@ -1,21 +1,13 @@
 mod app;
 mod app_builder;
-mod camera;
-mod entity;
+pub mod camera;
+pub mod entity;
 mod log_builder;
-mod material;
-mod mesh;
-mod shader;
-mod transform;
+pub mod material;
+pub mod mesh;
+pub mod shader;
+pub mod texture;
+pub mod transform;
+pub mod utils;
 
 pub use app_builder::AppBuilder;
-
-use crate::{mesh::vertex::Vertex, transform::Transform};
-
-pub fn get_transform_zero() -> Transform {
-    Transform::new()
-}
-
-pub fn get_vertex_from_position(x: f32, y: f32, z: f32) -> Vertex {
-    Vertex::from_position(x, y, z)
-}
