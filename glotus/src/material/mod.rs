@@ -16,8 +16,24 @@ pub enum UniformValue {
 }
 
 impl UniformValue {
+    pub fn get_float(value: f32) -> UniformValue {
+        UniformValue::Float(value)
+    }
+
+    pub fn get_int(value: i32) -> UniformValue {
+        UniformValue::Int(value)
+    }
+
     pub fn get_vector3_f32(x: f32, y: f32, z: f32) -> UniformValue {
         UniformValue::Vector3(Vector3 { x, y, z })
+    }
+
+    pub fn get_vector4_f32(x: f32, y: f32, z: f32, w: f32) -> UniformValue {
+        UniformValue::Vector4(Vector4 { x, y, z, w })
+    }
+
+    pub fn get_texture(slot_id: usize) -> UniformValue {
+        UniformValue::Texture(slot_id)
     }
 }
 

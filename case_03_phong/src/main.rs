@@ -25,7 +25,7 @@ fn main() {
             "material_test",
             "shader_test",
             [
-                ("material.texture".to_string(), UniformValue::Texture(0)),
+                ("material.texture".to_string(), UniformValue::get_texture(0)),
                 (
                     "material.ambient_factor".to_string(),
                     UniformValue::get_vector3_f32(0.2, 0.2, 0.2),
@@ -40,7 +40,7 @@ fn main() {
                 ),
                 (
                     "material.specular_shininess".to_string(),
-                    UniformValue::Float(256.0),
+                    UniformValue::get_float(256.0),
                 ),
             ]
             .into_iter()
