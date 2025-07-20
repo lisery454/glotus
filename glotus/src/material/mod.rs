@@ -15,6 +15,12 @@ pub enum UniformValue {
     Texture(usize), // 纹理槽位
 }
 
+impl UniformValue {
+    pub fn get_vector3_f32(x: f32, y: f32, z: f32) -> UniformValue {
+        UniformValue::Vector3(Vector3 { x, y, z })
+    }
+}
+
 #[derive(Debug)]
 pub struct Material {
     pub shader_name: String,

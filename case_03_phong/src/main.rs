@@ -25,11 +25,23 @@ fn main() {
             "material_test",
             "shader_test",
             [
-                ("texture1".to_string(), UniformValue::Texture(0)),
-                ("ambient_factor".to_string(), UniformValue::Float(0.2)),
-                ("diffuse_factor".to_string(), UniformValue::Float(1.0)),
-                ("specular_factor".to_string(), UniformValue::Float(0.5)),
-                ("specular_shininess".to_string(), UniformValue::Float(256.0)),
+                ("material.texture".to_string(), UniformValue::Texture(0)),
+                (
+                    "material.ambient_factor".to_string(),
+                    UniformValue::get_vector3_f32(0.2, 0.2, 0.2),
+                ),
+                (
+                    "material.diffuse_factor".to_string(),
+                    UniformValue::get_vector3_f32(1.0, 1.0, 1.0),
+                ),
+                (
+                    "material.specular_factor".to_string(),
+                    UniformValue::get_vector3_f32(0.5, 0.5, 0.5),
+                ),
+                (
+                    "material.specular_shininess".to_string(),
+                    UniformValue::Float(256.0),
+                ),
             ]
             .into_iter()
             .collect(),
