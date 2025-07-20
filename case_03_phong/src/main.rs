@@ -14,8 +14,16 @@ fn main() {
             "assets/case_03_phong/shaders/fs.frag",
         )
         .create_texture(
-            "texture_brick",
-            "assets/case_03_phong/textures/brick.png",
+            "texture_diffuse",
+            "assets/case_03_phong/textures/texture_diffuse.png",
+            WrappingMode::Repeat,
+            WrappingMode::Repeat,
+            FilteringMode::LinearMipmapLinear,
+            FilteringMode::Linear,
+        )
+        .create_texture(
+            "texture_specular",
+            "assets/case_03_phong/textures/texture_specular.png",
             WrappingMode::Repeat,
             WrappingMode::Repeat,
             FilteringMode::LinearMipmapLinear,
@@ -25,7 +33,14 @@ fn main() {
             "material_test",
             "shader_test",
             [
-                ("material.texture".to_string(), UniformValue::get_texture(0)),
+                (
+                    "material.diffuse_texture".to_string(),
+                    UniformValue::get_texture(0),
+                ),
+                (
+                    "material.specular_texture".to_string(),
+                    UniformValue::get_texture(1),
+                ),
                 (
                     "material.ambient_factor".to_string(),
                     UniformValue::get_vector3_f32(0.2, 0.2, 0.2),
@@ -36,7 +51,7 @@ fn main() {
                 ),
                 (
                     "material.specular_factor".to_string(),
-                    UniformValue::get_vector3_f32(0.5, 0.5, 0.5),
+                    UniformValue::get_vector3_f32(0.8, 0.8, 0.8),
                 ),
                 (
                     "material.specular_shininess".to_string(),
@@ -45,7 +60,12 @@ fn main() {
             ]
             .into_iter()
             .collect(),
-            [("texture_brick".to_string(), 0u32)].into_iter().collect(),
+            [
+                ("texture_diffuse".to_string(), 0u32),
+                ("texture_specular".to_string(), 1u32),
+            ]
+            .into_iter()
+            .collect(),
         )
         .create_mesh_from_data(
             "mesh_test",
@@ -174,7 +194,7 @@ fn main() {
             "mesh_test",
         )
         .set_camera_transform(Transform::from_position(0.0, 0.0, 10.0))
-        .set_light_color(1.0, 0.5, 0.5, 1.0)
+        .set_light_color(1.0, 1.0, 1.0, 1.0)
         .set_light_transform(Transform::from_position(10.0, 8.0, 6.0))
         .run();
 }
