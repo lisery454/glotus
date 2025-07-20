@@ -125,6 +125,17 @@ impl Shader {
         unsafe { gl::GetUniformLocation(self.id, std::ffi::CString::new(name).unwrap().as_ptr()) }
     }
 
+    pub fn set_uniform_mat3(&self, name: &str, value: &cgmath::Matrix3<f32>) {
+        unsafe {
+            let location = self.get_location_of_uniform(name);
+            if location != -1 {
+                gl::UniformMatrix3fv(location, 1, gl::FALSE, value.as_ptr());
+            } else {
+                warn!("set shader location failed: {}", name);
+            }
+        }
+    }
+
     pub fn set_uniform_mat4(&self, name: &str, value: &cgmath::Matrix4<f32>) {
         unsafe {
             let location = self.get_location_of_uniform(name);

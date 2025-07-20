@@ -9,5 +9,6 @@ pub mod shader;
 pub mod texture;
 pub mod transform;
 pub mod utils;
+pub mod light;
 
 pub use app_builder::AppBuilder;

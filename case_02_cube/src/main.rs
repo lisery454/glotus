@@ -24,18 +24,10 @@ fn main() {
         .create_material(
             "material_test",
             "shader_test",
-            [
-                ("texture1".to_string(), UniformValue::Int(0)),
-                ("texture2".to_string(), UniformValue::Int(1)),
-            ]
-            .into_iter()
-            .collect(),
-            [
-                ("texture_brick".to_string(), 0u32),
-                ("texture_brick".to_string(), 1u32),
-            ]
-            .into_iter()
-            .collect(),
+            [("texture1".to_string(), UniformValue::Texture(0))]
+                .into_iter()
+                .collect(),
+            [("texture_brick".to_string(), 0u32)].into_iter().collect(),
         )
         .create_mesh_from_data(
             "mesh_test",

@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use cgmath::Vector4;
 use log::error;
 
 use crate::{
@@ -112,6 +113,21 @@ impl AppBuilder {
 
     pub fn set_camera_transform(&mut self, transform: Transform) -> &mut Self {
         self.app.borrow_mut().set_camera_transform(transform);
+        self
+    }
+
+    pub fn set_light_transform(&mut self, transform: Transform) -> &mut Self {
+        self.app.borrow_mut().set_light_transform(transform);
+        self
+    }
+
+    pub fn set_light_color(&mut self, r: f32, g: f32, b: f32, a: f32) -> &mut Self {
+        self.app.borrow_mut().set_light_color(Vector4 {
+            x: r,
+            y: g,
+            z: b,
+            w: a,
+        });
         self
     }
 

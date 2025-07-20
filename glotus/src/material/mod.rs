@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use cgmath::{Matrix4, Vector3, Vector4};
+use cgmath::{Matrix3, Matrix4, Vector3, Vector4};
 
 use crate::shader::{Shader, ShaderError};
 
@@ -10,6 +10,7 @@ pub enum UniformValue {
     Int(i32),
     Vector3(Vector3<f32>),
     Vector4(Vector4<f32>),
+    Matrix3(Matrix3<f32>),
     Matrix4(Matrix4<f32>),
     Texture(usize), // 纹理槽位
 }

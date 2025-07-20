@@ -2,6 +2,7 @@ use crate::app;
 use crate::camera::Camera;
 use crate::camera::camera_operation::CameraMovement;
 use crate::entity::Entity;
+use crate::light::Light;
 use crate::log_builder;
 use crate::material::Material;
 use crate::material::UniformValue;
@@ -15,13 +16,17 @@ use crate::texture::FilteringMode;
 use crate::texture::Texture2D;
 use crate::texture::WrappingMode;
 use crate::transform::Transform;
+use crate::utils::compute_normal_matrix;
+use cgmath::EuclideanSpace;
 use cgmath::Matrix4;
 use cgmath::Vector2;
+use cgmath::Vector4;
 use cgmath::Zero;
 use chrono::DateTime;
 use chrono::Local;
 use gl::types::*;
 use glfw::SwapInterval;
+use glfw::ffi::glfwGetTime;
 use glfw::{Action, Context, Glfw, GlfwReceiver, Key, PWindow, WindowEvent};
 use log::debug;
 use log::error;
@@ -44,7 +49,7 @@ pub struct App {
     glfw: Option<Rc<RefCell<Glfw>>>,
     event_receiver: Option<Rc<RefCell<GlfwReceiver<(f64, WindowEvent)>>>>,
     delta_time: f32,
-    last_time: DateTime<Local>,
+    last_time: f32,
     last_cursor_pos: Vector2<f32>,
     is_first_cursor_move: bool,
 
@@ -54,6 +59,7 @@ pub struct App {
     textures: Rc<RefCell<HashMap<String, Texture2D>>>,
     entities: Rc<RefCell<HashMap<String, Entity>>>,
 
+    light: Rc<RefCell<Light>>,
     camera: Rc<RefCell<Camera>>,
 }
 
@@ -65,7 +71,7 @@ impl App {
             glfw: None,
             event_receiver: None,
             delta_time: 0.0,
-            last_time: Local::now(),
+            last_time: 0.0,
             last_cursor_pos: Vector2 { x: 0.0, y: 0.0 },
             is_first_cursor_move: true,
 
@@ -75,6 +81,7 @@ impl App {
             textures: Rc::new(RefCell::new(HashMap::new())),
             entities: Rc::new(RefCell::new(HashMap::new())),
 
+            light: Rc::new(RefCell::new(Light::new())),
             camera: Rc::new(RefCell::new(Camera::new(Transform::new()))),
         };
 
@@ -302,6 +309,14 @@ impl App {
         self.camera.borrow_mut().set_transform(transform);
     }
 
+    pub fn set_light_transform(&mut self, transform: Transform) {
+        self.light.borrow_mut().set_transform(transform);
+    }
+
+    pub fn set_light_color(&mut self, color: Vector4<f32>) {
+        self.light.borrow_mut().set_color(color);
+    }
+
     pub fn run(&mut self) {
         self.is_running = true;
 
@@ -322,9 +337,11 @@ impl App {
     }
 
     fn calc_delta_time(&mut self) {
-        let current_time = Local::now();
-        self.delta_time = (current_time - self.last_time).abs().as_seconds_f32();
-        self.last_time = current_time;
+        unsafe {
+            let current_time = glfwGetTime() as f32;
+            self.delta_time = (current_time - self.last_time).abs();
+            self.last_time = current_time;
+        }
         debug!("fps: {:?}", 1.0 / self.delta_time);
     }
 
@@ -360,13 +377,25 @@ impl App {
 
             let view_matrix = self.camera.borrow().get_view_matrix();
             let projection_matrix = self.camera.borrow().get_projection_matrix();
+            let light_color = self.light.borrow().get_color();
+            let light_position = self.light.borrow().get_transform().get_position().to_vec();
+            let view_position = self.camera.borrow().get_transform().get_position().to_vec();
 
             for (entity_name, entity) in self.entities.borrow().iter() {
                 let model_matrix = entity.transform.to_matrix();
 
                 // 给材质注入全局变量，比如mvp
+                // let mesh = self.get_mesh_by_name(&entity.mesh_name);
                 let mut material = self.get_material_by_name(&entity.material_name);
+                material.insert_uniform("light_color", UniformValue::Vector4(light_color));
+                material.insert_uniform("light_position", UniformValue::Vector3(light_position));
+                material.insert_uniform("view_position", UniformValue::Vector3(view_position));
                 material.insert_uniform("model_matrix", UniformValue::Matrix4(model_matrix));
+
+                material.insert_uniform(
+                    "normal_matrix",
+                    UniformValue::Matrix3(compute_normal_matrix(&model_matrix)),
+                );
                 material.insert_uniform("view_matrix", UniformValue::Matrix4(view_matrix));
                 material.insert_uniform(
                     "projection_matrix",
@@ -397,6 +426,7 @@ impl App {
                 UniformValue::Int(v) => shader.set_uniform_i32(name, *v),
                 UniformValue::Vector3(v) => shader.set_uniform_vec3(name, v),
                 UniformValue::Vector4(v) => shader.set_uniform_vec4(name, v),
+                UniformValue::Matrix3(m) => shader.set_uniform_mat3(name, m),
                 UniformValue::Matrix4(m) => shader.set_uniform_mat4(name, m),
                 UniformValue::Texture(slot) => shader.set_uniform_i32(name, *slot as i32),
             }
