@@ -1,36 +1,38 @@
 use std::collections::HashMap;
 
-use glotus::{mesh::vertex::Vertex, transform::Transform};
+use glotus::{mesh::Vertex, transform::Transform};
 
 fn main() {
-    glotus::AppBuilder::new()
-        .init_window(1440, 960)
-        .create_shader_from_file(
-            "shader_test",
-            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/vs_0.vert"),
-            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/fs_0.frag"),
-        )
-        .create_material(
-            "material_test",
-            "shader_test",
-            HashMap::new(),
-            HashMap::new(),
-        )
-        .create_mesh_from_data(
-            "mesh_test",
-            vec![
-                Vertex::from_position(1.0, 1.0, -5.0),
-                Vertex::from_position(1.0, -1.0, -5.0),
-                Vertex::from_position(-1.0, -1.0, -5.0),
-                Vertex::from_position(-1.0, 1.0, -5.0),
-            ],
-            vec![0, 1, 3, 1, 2, 3],
-        )
-        .create_entity(
-            "entity_test",
-            Transform::new(),
-            "material_test",
-            "mesh_test",
-        )
-        .run();
+    let mut app = glotus::App::new();
+    app.init_window(1400, 960);
+
+    app.create_shader_from_file(
+        "shader_test",
+        concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/vs_0.vert"),
+        concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/fs_0.frag"),
+    );
+
+    app.create_material(
+        "material_test",
+        "shader_test",
+        HashMap::new(),
+        HashMap::new(),
+    );
+    app.create_mesh_from_data(
+        "mesh_test",
+        vec![
+            Vertex::from_position(1.0, 1.0, -5.0),
+            Vertex::from_position(1.0, -1.0, -5.0),
+            Vertex::from_position(-1.0, -1.0, -5.0),
+            Vertex::from_position(-1.0, 1.0, -5.0),
+        ],
+        vec![0, 1, 3, 1, 2, 3],
+    );
+    app.create_entity(
+        "entity_test",
+        Transform::default(),
+        "material_test",
+        "mesh_test",
+    );
+    app.run();
 }

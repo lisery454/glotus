@@ -1,6 +1,6 @@
 use cgmath::Vector4;
 
-use crate::transform::{self, Transform};
+use crate::transform::Transform;
 
 #[derive(Debug)]
 pub struct Light {
@@ -11,7 +11,7 @@ pub struct Light {
 impl Light {
     pub fn new() -> Self {
         Self {
-            transform: Transform::new(),
+            transform: Transform::default(),
             color: Vector4 {
                 x: 1f32,
                 y: 1f32,
@@ -29,11 +29,11 @@ impl Light {
         self.transform = transform;
     }
 
-    pub fn get_color(&self) -> Vector4<f32> {
-        self.color
+    pub fn get_color(&self) -> [f32; 4] {
+        self.color.into()
     }
 
-    pub fn set_color(&mut self, color: Vector4<f32>) {
-        self.color = color;
+    pub fn set_color(&mut self, color: [f32; 4]) {
+        self.color = color.into();
     }
 }

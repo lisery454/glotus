@@ -1,38 +1,33 @@
 use cgmath::{Deg, InnerSpace, Quaternion, Rad, Rotation3, Vector3};
 
-use super::Camera;
+use crate::transform::Rotation;
+
+use super::camera::Camera;
 
 pub enum CameraMovement {
-    Forward { velocity: f32 },
-    Backward { velocity: f32 },
-    Left { velocity: f32 },
-    Right { velocity: f32 },
-    Up { velocity: f32 },
-    Down { velocity: f32 },
+    Forward,
+    Backward,
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 impl Camera {
-    pub fn process_move(&mut self, movement: CameraMovement, delta_time: f32) {
-        match movement {
-            CameraMovement::Forward { velocity } => {
-                self.transform.position += self.get_forward() * velocity * delta_time;
-            }
-            CameraMovement::Backward { velocity } => {
-                self.transform.position -= self.get_forward() * velocity * delta_time;
-            }
-            CameraMovement::Right { velocity } => {
-                self.transform.position += self.get_right() * velocity * delta_time;
-            }
-            CameraMovement::Left { velocity } => {
-                self.transform.position -= self.get_right() * velocity * delta_time;
-            }
-            CameraMovement::Up { velocity } => {
-                self.transform.position += self.get_up() * velocity * delta_time;
-            }
-            CameraMovement::Down { velocity } => {
-                self.transform.position -= self.get_up() * velocity * delta_time;
-            }
-        }
+    pub fn process_move(&mut self, movement: CameraMovement, velocity: f32, delta_time: f32) {
+        let delta_position = match movement {
+            CameraMovement::Forward => self.get_forward(),
+            CameraMovement::Backward => self.get_forward() * -1f32,
+            CameraMovement::Right => self.get_right(),
+            CameraMovement::Left => self.get_right() * -1f32,
+            CameraMovement::Up => self.get_up(),
+            CameraMovement::Down => self.get_up() * -1f32,
+        } * velocity
+            * delta_time;
+
+        self.get_transform_mut()
+            .get_position_mut()
+            .translate(delta_position);
     }
 
     pub fn process_turn(
@@ -50,11 +45,10 @@ impl Camera {
         let yaw_rotation = Quaternion::from_axis_angle(Vector3::unit_y(), yaw);
         let pitch_rotation = Quaternion::from_axis_angle(Vector3::unit_x(), pitch);
 
-        // 应用偏航旋转
-        self.transform.rotation = yaw_rotation * self.transform.rotation;
+        let mut new_rotation =
+            Quaternion::<f32>::from(self.get_transform().get_rotation().get_data());
 
-        // 应用俯仰旋转前检查角度限制
-        let new_rotation = self.transform.rotation * pitch_rotation;
+        new_rotation = yaw_rotation * new_rotation * pitch_rotation;
 
         // 从新旋转中提取前向向量
         let forward = new_rotation * Vector3::unit_z();
@@ -65,12 +59,10 @@ impl Camera {
         if constrain_pitch {
             // 限制俯仰角度在±89度内
             if pitch_angle.abs() < 89.0f32.to_radians() {
-                self.transform.rotation = new_rotation;
+                self.transform
+                    .set_rotation(Rotation::from(new_rotation.normalize()));
             }
         }
-
-        // 确保四元数归一化
-        self.transform.rotation = self.transform.rotation.normalize();
     }
 
     pub fn process_zoom(&mut self, yoffset: f32, sensitivity: f32) {

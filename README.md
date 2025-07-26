@@ -5,6 +5,11 @@
 ## TODO
 
 - 输入状态机，支持多键同时输入。
+- 世界树结构
+- 完善camera结构
+- 完善light的管理
+- window manager
+- 相机的移动方式
 
 ## utils
 

@@ -1,5 +1,5 @@
 // build.rs
-use gl_generator::{Api, Fallbacks, GlobalGenerator, Profile, Registry, StructGenerator};
+use gl_generator::{Api, Fallbacks, Profile, Registry, StructGenerator};
 use std::{env, fs::File, path::Path};
 
 #[cfg(windows)]
