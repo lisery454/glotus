@@ -10,12 +10,12 @@ fn main() {
         .init_window(1440, 960)
         .create_shader_from_file(
             "shader_test",
-            "assets/case_02_cube/shaders/vs.vert",
-            "assets/case_02_cube/shaders/fs.frag",
+            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/vs.vert"),
+            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/fs.frag"),
         )
         .create_texture(
             "texture_brick",
-            "assets/case_02_cube/textures/brick.png",
+            concat!(env!("CARGO_PKG_NAME"), "/assets/textures/brick.png"),
             WrappingMode::Repeat,
             WrappingMode::Repeat,
             FilteringMode::LinearMipmapLinear,

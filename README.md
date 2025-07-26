@@ -19,7 +19,7 @@ cargo run -p <project_name>
 
 ## shader uniforms
 
-以下是一些 shader 中不用声明就可以使用的全局变量。
+以下是一些 shader 中不用声明就可以使用的全局变量，需要使用`#include "glotus.glsl"`导入即可。
 
 ```glsl
 uniform mat3 normal_matrix; // 法线从模型空间到世界空间的矩阵

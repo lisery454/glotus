@@ -1,6 +1,6 @@
 use cgmath::Matrix;
 use gl::types::*;
-use log::{error, warn};
+use log::{error, info, warn};
 use std::{ffi::CString, fs, path::Path, ptr};
 use thiserror::Error;
 
@@ -19,6 +19,13 @@ pub struct Shader {
     id: GLuint,
 }
 
+fn pre_process_shader(source: &str) -> String {
+    let replacement = include_str!("./glotus.glsl");
+
+    let re = regex::Regex::new(r#"#include\s*"glotus\.glsl""#).unwrap();
+    re.replace_all(source, replacement).into_owned()
+}
+
 // create
 impl Shader {
     pub fn from_files(vertex_path: &Path, fragment_path: &Path) -> Result<Self, ShaderError> {
@@ -31,8 +38,15 @@ impl Shader {
     }
 
     pub fn from_sources(vertex_source: &str, fragment_source: &str) -> Result<Self, ShaderError> {
-        let vertex_shader_id = Self::compile_shader(vertex_source, gl::VERTEX_SHADER)?;
-        let fragment_shader_id = Self::compile_shader(fragment_source, gl::FRAGMENT_SHADER)?;
+        info!("{}", pre_process_shader(vertex_source));
+        let vertex_shader_id = Self::compile_shader(
+            pre_process_shader(vertex_source).as_str(),
+            gl::VERTEX_SHADER,
+        )?;
+        let fragment_shader_id = Self::compile_shader(
+            pre_process_shader(fragment_source).as_str(),
+            gl::FRAGMENT_SHADER,
+        )?;
         let program_id = Self::link_program(vertex_shader_id, fragment_shader_id)?;
 
         // 删除中间着色器对象

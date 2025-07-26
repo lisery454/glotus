@@ -7,8 +7,8 @@ fn main() {
         .init_window(1440, 960)
         .create_shader_from_file(
             "shader_test",
-            "assets/case_01_plane/shaders/vs_0.vert",
-            "assets/case_01_plane/shaders/fs_0.frag",
+            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/vs_0.vert"),
+            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/fs_0.frag"),
         )
         .create_material(
             "material_test",

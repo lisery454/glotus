@@ -1,4 +1,5 @@
 #version 460 core
+#include "glotus.glsl"
 out vec4 frag_color;
 
 in vec3 normal_in_world;
@@ -15,10 +16,6 @@ struct Material {
 };
 
 uniform Material material;
-
-uniform vec3 light_position;
-uniform vec3 view_position;
-uniform vec4 light_color;
 
 void main() {
   vec3 normal = normalize(normal_in_world);

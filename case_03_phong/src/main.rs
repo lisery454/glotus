@@ -10,12 +10,15 @@ fn main() {
         .init_window(1440, 960)
         .create_shader_from_file(
             "shader_test",
-            "assets/case_03_phong/shaders/vs.vert",
-            "assets/case_03_phong/shaders/fs.frag",
+            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/vs.vert"),
+            concat!(env!("CARGO_PKG_NAME"), "/assets/shaders/fs.frag"),
         )
         .create_texture(
             "texture_diffuse",
-            "assets/case_03_phong/textures/texture_diffuse.png",
+            concat!(
+                env!("CARGO_PKG_NAME"),
+                "/assets/textures/texture_diffuse.png"
+            ),
             WrappingMode::Repeat,
             WrappingMode::Repeat,
             FilteringMode::LinearMipmapLinear,
@@ -23,7 +26,10 @@ fn main() {
         )
         .create_texture(
             "texture_specular",
-            "assets/case_03_phong/textures/texture_specular.png",
+            concat!(
+                env!("CARGO_PKG_NAME"),
+                "/assets/textures/texture_specular.png"
+            ),
             WrappingMode::Repeat,
             WrappingMode::Repeat,
             FilteringMode::LinearMipmapLinear,
